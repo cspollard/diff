@@ -1,4 +1,4 @@
-module Normed where
+module Algebra.Module.Normed where
 
 open import Assume using (assume)
 open import Algebra.Bundles using (CommutativeRing)
@@ -125,8 +125,6 @@ module _
       open import Algebra.Module.Construct.Zero
       open CommutativeRing CR
 
+
 -- TODO
 -- →NormedModule
--- Unit
--- Zero
--- Product

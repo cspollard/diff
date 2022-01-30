@@ -1,10 +1,10 @@
 open import Relation.Binary using (Rel)
 open import Algebra.Bundles using (CommutativeRing)
 open import Algebra.Module.Morphism.Structures
-open import Normed using (NormedModule)
+open import Algebra.Module.Normed using (NormedModule)
 
 
-module Limit
+module Algebra.Module.Limit
   {r ℓr} {CR : CommutativeRing r ℓr}
   (open CommutativeRing CR using () renaming (Carrier to X))
   {rel} {_≤_ : Rel X rel}
@@ -65,21 +65,21 @@ Limit-syntax-0-0 f =
 syntax Limit-syntax-0-0 (λ x → f) = f ⟶0 As x ⟶0
 
 _Approximates_At_
-  : (δf : Carrierᴬ → Carrierᴬ → Carrierᴮ)
+  : (δf : Carrierᴬ → Carrierᴮ)
   → (f : Carrierᴬ → Carrierᴮ)
   → (x : Carrierᴬ)
   → Set _
-δf Approximates f At x = (f (x +ᴬ dx) -ᴮ (f x +ᴮ δf x dx)) ⟶0 As dx ⟶0
+δf Approximates f At x = (f (x +ᴬ dx) -ᴮ (f x +ᴮ δf dx)) ⟶0 As dx ⟶0
 
 _Differentiates_At_
-  : (Carrierᴬ → Carrierᴬ → Carrierᴮ)
+  : (Carrierᴬ → Carrierᴮ)
   → (Carrierᴬ → Carrierᴮ)
   → Carrierᴬ
   → Set _
-δf Differentiates f At x = IsModuleHomomorphism MA.M MB.M (δf x) × (δf Approximates f At x)
+δf Differentiates f At x = IsModuleHomomorphism MA.M MB.M δf × (δf Approximates f At x)
 
 _DifferentiableAt_ : (f : Carrierᴬ → Carrierᴮ) (x : Carrierᴬ) → Set _
-f DifferentiableAt x = Σ[ δf ∈ (Carrierᴬ → Carrierᴬ → Carrierᴮ) ] δf Differentiates f At x
+f DifferentiableAt x = Σ[ δf ∈ (Carrierᴬ → Carrierᴮ) ] δf Differentiates f At x
 
 Differentiable : (f : Carrierᴬ → Carrierᴮ) → Set _
 Differentiable f = ∀ x → f DifferentiableAt x
