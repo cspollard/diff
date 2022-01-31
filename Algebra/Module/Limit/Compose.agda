@@ -2,7 +2,6 @@ open import Relation.Binary using (Rel)
 open import Algebra.Bundles using (CommutativeRing)
 
 open import Algebra.Module.Normed
-import Algebra.Module.Limit as Limit
 
 module Algebra.Module.Limit.Compose
   {r ℓr} {CR : CommutativeRing r ℓr}
@@ -18,6 +17,8 @@ open import Function using (_∘_)
 
 open CommutativeRing CR
 open import Assume using (assume)
+
+import Algebra.Module.Limit as Limit
 
 open Limit MA MB using () renaming
   ( _DifferentiableAt_ to _DifferentiableAt₁₂_
