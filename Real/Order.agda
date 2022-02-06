@@ -10,10 +10,10 @@ open import Relation.Binary using (IsDecTotalOrder; DecTotalOrder)
 open import Level using (0ℓ)
 
 _≤_ : ℝ → ℝ → Set
-x ≤ y = T (x ℝ.≤ᵇ y)
+x ≤ y = T (x ≤ᵇ y)
 
 _≤?_ : ∀ x y → Dec (x ≤ y)
-x ≤? y = T? (x ℝ.≤ᵇ y)
+x ≤? y = T? (x ≤ᵇ y)
 
 
 ≤-isDecTotalOrder : IsDecTotalOrder _≈_ _≤_

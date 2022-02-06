@@ -57,6 +57,15 @@ private
   → Module CR (a ⊔ mb) (a ⊔ ℓmb)
 →-module A MB = record { toModule A MB }
 
+→-module'
+  : ∀ {r ℓr} {CR : CommutativeRing r ℓr}
+    {ma ℓma} (MA : Module CR ma ℓma)
+    {mb ℓmb} (MB : Module CR mb ℓmb)
+  → Module CR (ma ⊔ mb) (ma ⊔ ℓmb)
+→-module' MA MB = →-module (Carrierᴹ MA) MB
+  where open Module
+
+
 module _ 
   {r ℓr} {CR : CommutativeRing r ℓr}
   {ma ℓma} (MA : Module CR ma ℓma)
