@@ -30,13 +30,13 @@ module _
   where
 
   private
-    module CR = CommutativeRing CR
     module M = Module M
     module N = Module N
 
   data D : ℕ → Set (m ⊔ n) where
     z : N.Carrierᴹ → D zero
     d : ∀ {k} → (fx : N.Carrierᴹ) → (dfx : M.Carrierᴹ → D k) → D (suc k)
+
 
 module _
   {r ℓ} {CR : CommutativeRing r ℓ}
@@ -110,17 +110,9 @@ module _
   hessian : (df : D M N 2) (v v' : M.Carrierᴹ) → N.Carrierᴹ
   hessian df v v' = df |> diff v |> diff v' |> extract
 
-  lop : ∀ {l} l' {p : l' ℕ.≤ l} → D M N l → D M N l'
-  lop zero {ℕ.z≤n} (z x) = z x
-  lop zero {ℕ.z≤n} (d fx dfx) = z fx
-  lop (suc l) {p = ℕ.s≤s p} (d fx dfx) = d fx λ v → lop l {p = p} (dfx v)
-
   hack : ∀ {l} → D M N (suc l) → D M N l
-  hack {l = l} = lop l {p = n≤sucn l}
-    where
-      n≤sucn : ∀ a → a ℕ.≤ suc a
-      n≤sucn zero = ℕ.z≤n
-      n≤sucn (suc a) = ℕ.s≤s (n≤sucn a)
+  hack {zero} (d fx dfx) = z fx
+  hack {suc l} (d fx dfx) = d fx λ v → hack {l} (dfx v)
 
 
 module _ where
@@ -191,11 +183,6 @@ module _ where
   (f >-< f') dfx@(d x dx) = d (f x) λ v → dx v * f' (hack dfx)
 
 
--- -- dot : ∀ {n} (x y : ℝ ^ suc n) → ℝ
--- -- dot {zero} x y = x ℝ.* y
--- -- dot {suc n} (x , xs) (y , ys) = x ℝ.* y ℝ.+ dot xs ys
-
-
   ε : ∀ {rank} → Fin rank → ℝ ^ rank
   ε {zero} n = _
   ε {suc zero} _ = 1.0
@@ -214,11 +201,11 @@ module _ where
   infixr 9 -_
   infixr 9 e^_
 
-
   -_
     : ∀ {r ℓ} {CR : CommutativeRing r ℓ} {m ℓm} {{M : Module CR m ℓm}} (x : Mod.Carrierᴹ M)
     → Mod.Carrierᴹ M
   -_ x = -ᴹ x
+
 
   ℝ-sgn : ℝ → ℝ
   ℝ-sgn x = if does (0.0 ℝ.≤? x) then 1.0 else ℝ.- 1.0
@@ -285,9 +272,9 @@ module _ where
   logPoisson k λ' = logPoisson' k λ' - sterling k
 
 
--- -- -- descend : ∀ {rank} (f : D (ℝ^ rank) 1 → D ℝ-mod 1) (steps : ℕ) (start : ℝ ^ rank) → ℝ ^ rank
--- -- -- descend f zero start = start
--- -- -- descend f (suc steps) start = {!   !}
+  -- descend : ∀ {rank} (f : D (ℝ^ rank) 1 → D ℝ-mod 1) (steps : ℕ) (start : ℝ ^ rank) → ℝ ^ rank
+  -- descend f zero start = start
+  -- descend f (suc steps) start = {!   !}
 
 
   module _ where
