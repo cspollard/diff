@@ -33,6 +33,8 @@ module _
     module M = Module M
     module N = Module N
 
+  -- TODO
+  -- can we use M → D N k everywhere?!
   data D : ℕ → Set (m ⊔ n) where
     z : N.Carrierᴹ → D zero
     d : ∀ {k} → (fx : N.Carrierᴹ) → (dfx : M.Carrierᴹ → D k) → D (suc k)
@@ -190,11 +192,13 @@ module _ where
   ε {2+ rank} (F.suc n) = Mod.0ᴹ ℝ-mod , ε n
 
 
-  ∇_ : ∀ {rank} → D (ℝ^ rank) (ℝ^ 1) 1 → ℝ ^ rank
+  ∇_ grad : ∀ {rank} → D (ℝ^ rank) (ℝ^ 1) 1 → ℝ ^ rank
   ∇_ {rank = rank} f = map (jacobian f) rank unitvecs
     where
       unitvecs : (ℝ ^ rank) ^ rank
       unitvecs = map ε rank (tabulate rank id)
+
+  grad = ∇_
 
 
   infixl 8 _**_
@@ -280,7 +284,7 @@ module _ where
   module _ where
     open import Relation.Binary.PropositionalEquality using (refl)
 
-    _ : (∇ (pow 2 (var 1.0))) ℝ.≈ 2.0
+    _ : (∇ (var 1.0 * var 1.0)) ℝ.≈ 2.0
     _ = refl
 
 -- -- --   _ : run e^_ 2.0 ℝ.≈ (ℝ.e^ 2.0)
