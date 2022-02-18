@@ -25,96 +25,130 @@ open import Algebra.Module.Vec.Recursive
 
 module _
   {r ℓ} {CR : CommutativeRing r ℓ}
-  {m ℓm} (M : Module CR m ℓm)
-  {n ℓn} (N : Module CR n ℓn)
   where
 
-  private
-    module M = Module M
-    module N = Module N
+  -- D B k is the solution to
+  -- (A → X) → A ^ suc k → B
+  -- i.e. D B k ~ A ^ k → B
+
+  open Module
+
+  D : ∀ {m ℓm} (M : Module CR m ℓm) → ℕ → Set _
+  D {m = m} M k = ∀ {X : Set m} → X ^ suc k → Carrierᴹ M
+
+  const
+    : ∀ {m ℓm} {{M : Module CR m ℓm}}
+    → ∀ {k} → Carrierᴹ M → D M k
+  const {k = zero} c x = c
+  const {{M}} {k = suc k} c v = 0ᴹ M
+
+
+  double
+    : ∀ {m ℓm} {{M : Module CR m ℓm}}
+    → ∀ {k} → D M k → D M k
+  double {{M}} x y = let x' = x y in _+ᴹ_ M x' x'
+
+
+  -- D : Level → ∀ {n ℓn} (N : Module CR n ℓn) → ℕ → Set _
+  -- D m N k = {M : Set m} → M → M ^ k → Carrierᴹ N
+
+  -- compose
+  --   : ∀ {x} {X : Set x}
+  --   → ∀ {n ℓn} {N : Module CR n ℓn}
+  --   → ∀ {o ℓo} {O : Module CR o ℓo}
+  --   → ∀ {k} → (f : X → D N k) → (g : Carrierᴹ N → D O k)
+  --   → X → D O k
+  -- compose = ?
+
+
+
+  -- _th-derivative_ : ∀ k → (D k → D k) → M.Carrierᴹ → N.Carrierᴹ
+
+  -- k th-derivative f = {!   !}
+
 
   -- TODO
   -- can we use M → D N k everywhere?!
-  data D : ℕ → Set (m ⊔ n) where
-    z : N.Carrierᴹ → D zero
-    d : ∀ {k} → (fx : N.Carrierᴹ) → (dfx : M.Carrierᴹ → D k) → D (suc k)
+  -- data D : ℕ → Set (m ⊔ n) where
+  --   z : N.Carrierᴹ → D zero
+  --   d : ∀ {k} → (fx : N.Carrierᴹ) → (dfx : M.Carrierᴹ → D k) → D (suc k)
 
 
-module _
-  {r ℓ} {CR : CommutativeRing r ℓ}
-  {m ℓm} {M : Module CR m ℓm}
-  {n ℓn} {N : Module CR n ℓn}
-  where
+-- module _
+--   {r ℓ} {CR : CommutativeRing r ℓ}
+--   {m ℓm} {M : Module CR m ℓm}
+--   {n ℓn} {N : Module CR n ℓn}
+--   where
 
-  private
-    module CR = CommutativeRing CR
-    module M = Module M
-    module N = Module N
+--   private
+--     module CR = CommutativeRing CR
+--     module M = Module M
+--     module N = Module N
 
-  private
-    module dmod where
+--   private
+--     module dmod where
 
-      Carrierᴹ : ∀ {k : ℕ} → Set (m ⊔ n)
-      Carrierᴹ {k} = D M N k
+--       Carrierᴹ : ∀ {k : ℕ} → Set (m ⊔ n)
+--       Carrierᴹ {k} = D M N k
 
-      _≈ᴹ_ : ∀ {k} → Rel (D M N k) (m ⊔ ℓn)
-      _≈ᴹ_ (z x) (z y) = Lift (m ⊔ ℓn) (x N.≈ᴹ y)
-      _≈ᴹ_ (d fx dfx) (d fy dfy) = (fx N.≈ᴹ fy) × (∀ v → dfx v ≈ᴹ dfy v)
+--       _≈ᴹ_ : ∀ {k} → Rel (D M N k) (m ⊔ ℓn)
+--       _≈ᴹ_ (z x) (z y) = Lift (m ⊔ ℓn) (x N.≈ᴹ y)
+--       _≈ᴹ_ (d fx dfx) (d fy dfy) = (fx N.≈ᴹ fy) × (∀ v → dfx v ≈ᴹ dfy v)
 
-      _+ᴹ_ : ∀ {k} → (x y : D M N k) → D M N k
-      _+ᴹ_ (z x) (z y) = z (x N.+ᴹ y)
-      _+ᴹ_ (d fx dfx) (d fy dfy) = d (fx N.+ᴹ fy) λ v → dfx v +ᴹ dfy v
+--       _+ᴹ_ : ∀ {k} → (x y : D M N k) → D M N k
+--       _+ᴹ_ (z x) (z y) = z (x N.+ᴹ y)
+--       _+ᴹ_ (d fx dfx) (d fy dfy) = d (fx N.+ᴹ fy) λ v → dfx v +ᴹ dfy v
 
-      _*ₗ_ : ∀ {k} → (s : CR.Carrier) (x : D M N k) → D M N k
-      _*ₗ_ s (z x) = z (s N.*ₗ x)
-      _*ₗ_ s (d fx dfx) = d (s N.*ₗ fx) λ v → s *ₗ dfx v
+--       _*ₗ_ : ∀ {k} → (s : CR.Carrier) (x : D M N k) → D M N k
+--       _*ₗ_ s (z x) = z (s N.*ₗ x)
+--       _*ₗ_ s (d fx dfx) = d (s N.*ₗ fx) λ v → s *ₗ dfx v
 
-      _*ᵣ_ : ∀ {k} → (x : D M N k) (s : CR.Carrier) → D M N k
-      _*ᵣ_ = flip _*ₗ_
+--       _*ᵣ_ : ∀ {k} → (x : D M N k) (s : CR.Carrier) → D M N k
+--       _*ᵣ_ = flip _*ₗ_
 
-      0ᴹ : ∀ {k} → D M N k
-      0ᴹ {zero} = z N.0ᴹ
-      0ᴹ {suc k} = d N.0ᴹ λ v → 0ᴹ
+--       0ᴹ : ∀ {k} → D M N k
+--       0ᴹ {zero} = z N.0ᴹ
+--       0ᴹ {suc k} = d N.0ᴹ λ v → 0ᴹ
 
-      -ᴹ_ : ∀ {k} → D M N k → D M N k
-      -ᴹ_ (z x) = z (N.-ᴹ x)
-      -ᴹ_ (d fx dfx) = d (N.-ᴹ fx) λ v → -ᴹ dfx v
+--       -ᴹ_ : ∀ {k} → D M N k → D M N k
+--       -ᴹ_ (z x) = z (N.-ᴹ x)
+--       -ᴹ_ (d fx dfx) = d (N.-ᴹ fx) λ v → -ᴹ dfx v
 
-  instance
-    D-module : ∀ {k : ℕ} → Module CR _ _
-    D-module {k} =
-      record
-      { Carrierᴹ = dmod.Carrierᴹ {k}
-      ; isModule = assume
-      ; dmod
-      }
+--   instance
+--     D-module : ∀ {k : ℕ} → Module CR _ _
+--     D-module {k} =
+--       record
+--       { Carrierᴹ = dmod.Carrierᴹ {k}
+--       ; isModule = assume
+--       ; dmod
+--       }
 
-  private variable k : ℕ
+--   private variable k : ℕ
 
-  run : D M N k → N.Carrierᴹ
-  run (z x) = x
-  run (d x _) = x
+--   run : D M N k → N.Carrierᴹ
+--   run (z x) = x
+--   run (d x _) = x
 
-  extract : D M N zero → N.Carrierᴹ
-  extract = run
+--   extract : D M N zero → N.Carrierᴹ
+--   extract = run
 
-  diff : M.Carrierᴹ → D M N (suc k) → D M N k
-  diff v (d _ x) = x v
+--   diff : M.Carrierᴹ → D M N (suc k) → D M N k
+--   diff v (d _ x) = x v
 
-  konst _# : ∀ (c : N.Carrierᴹ) → D M N k
-  konst {k = zero} c = z c
-  konst {k = suc k} c = d c (λ v → konst N.0ᴹ)
-  x # = konst x
+--   konst _# : ∀ (c : N.Carrierᴹ) → D M N k
+--   konst {k = zero} c = z c
+--   konst {k = suc k} c = d c (λ v → konst N.0ᴹ)
+--   x # = konst x
 
-  jacobian : (df : D M N 1) (v : M.Carrierᴹ) → N.Carrierᴹ
-  jacobian df v = df |> diff v |> extract
+--   jacobian : (df : D M N 1) (v : M.Carrierᴹ) → N.Carrierᴹ
+--   jacobian df v = df |> diff v |> extract
 
-  hessian : (df : D M N 2) (v v' : M.Carrierᴹ) → N.Carrierᴹ
-  hessian df v v' = df |> diff v |> diff v' |> extract
+--   hessian : (df : D M N 2) (v v' : M.Carrierᴹ) → N.Carrierᴹ
+--   hessian df v v' = df |> diff v |> diff v' |> extract
 
-  hack : ∀ {l} → D M N (suc l) → D M N l
-  hack {zero} (d fx dfx) = z fx
-  hack {suc l} (d fx dfx) = d fx λ v → hack {l} (dfx v)
+--   hack : ∀ {l} → D M N (suc l) → D M N l
+--   hack {zero} (d fx dfx) = z fx
+--   hack {suc l} (d fx dfx) = d fx λ v → hack {l} (dfx v)
 
 
 module _ where
@@ -144,195 +178,200 @@ module _ where
   ℝ-mod : Module ℝ-commutativeRing 0ℓ 0ℓ
   ℝ-mod = ℝ^ 1
 
-  -- TODO
-  -- is this really the identity?
-  var : ∀ {rank k} (c : Mod.Carrierᴹ (ℝ^ rank)) → D (ℝ^ rank) (ℝ^ rank) k
-  var {rank} {zero} c = z c
-  var {rank} {suc n} c = d c (λ v → konst (replicate rank 1.0))
+  exp : ∀ {k} → D ℝ-mod k → D ℝ-mod k
+  exp {0} f x = ℝ.e^ f x
+  exp {1} f' xdx = let (fx , f'x) = f xdx in {! (ℝ.e^ fx) ℝ.* f'x   !}
+  exp {k} f y = {!   !}
 
-  instance
-    ℝ^n : ∀ {n} → Module ℝ-cr 0ℓ 0ℓ
-    ℝ^n {n} = ℝ^ n
+--   -- TODO
+--   -- is this really the identity?
+--   var : ∀ {rank k} (c : Mod.Carrierᴹ (ℝ^ rank)) → D (ℝ^ rank) (ℝ^ rank) k
+--   var {rank} {zero} c = z c
+--   var {rank} {suc n} c = d c (λ v → konst (replicate rank 1.0))
 
-
-  infixl 6 _+_ _-_
-  infixl 7 _*_
-  -- linear and bilinear forms
-  _*_
-    : ∀ {m ℓm} {M : Module ℝ-cr m ℓm} {k rank}
-    → (x y : D M (ℝ^ rank) k)
-    → D M (ℝ^ rank) k
-
-  open Module {{...}}
-  _+_ _-_
-    : ∀ {r ℓ} {CR : CommutativeRing r ℓ} {m ℓm} {{M : Module CR m ℓm}} (x y : Mod.Carrierᴹ M)
-    → Mod.Carrierᴹ M
-  x + y = x +ᴹ y
-  x - y = x +ᴹ (-ᴹ y)
+--   instance
+--     ℝ^n : ∀ {n} → Module ℝ-cr 0ℓ 0ℓ
+--     ℝ^n {n} = ℝ^ n
 
 
-  _*_ {rank = rank} (z x) (z y) = z (zipWith ℝ._*_ rank x y)
-  _*_ {rank = rank} dfx@(d fx f'x) dgx@(d gx g'x) =
-    d (zipWith ℝ._*_ rank fx gx) (λ v → hack dfx * g'x v + hack dgx * f'x v)
+--   infixl 6 _+_ _-_
+--   infixl 7 _*_
+--   -- linear and bilinear forms
+--   _*_
+--     : ∀ {m ℓm} {M : Module ℝ-cr m ℓm} {k rank}
+--     → (x y : D M (ℝ^ rank) k)
+--     → D M (ℝ^ rank) k
+
+--   open Module {{...}}
+--   _+_ _-_
+--     : ∀ {r ℓ} {CR : CommutativeRing r ℓ} {m ℓm} {{M : Module CR m ℓm}} (x y : Mod.Carrierᴹ M)
+--     → Mod.Carrierᴹ M
+--   x + y = x +ᴹ y
+--   x - y = x +ᴹ (-ᴹ y)
 
 
-  -- convenience function
-  _>-<_
-    : ∀ {k}
-    → (f : ℝ → ℝ) (f' : ∀ {l} → D ℝ-mod ℝ-mod l → D ℝ-mod ℝ-mod l)
-    → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
-  (f >-< _) (z x) = z (f x)
-  (f >-< f') dfx@(d x dx) = d (f x) λ v → dx v * f' (hack dfx)
+--   _*_ {rank = rank} (z x) (z y) = z (zipWith ℝ._*_ rank x y)
+--   _*_ {rank = rank} dfx@(d fx f'x) dgx@(d gx g'x) =
+--     d (zipWith ℝ._*_ rank fx gx) (λ v → hack dfx * g'x v + hack dgx * f'x v)
 
 
-  ε : ∀ {rank} → Fin rank → ℝ ^ rank
-  ε {zero} n = _
-  ε {suc zero} _ = 1.0
-  ε {2+ rank} F.zero = 1.0 , Mod.0ᴹ (ℝ^ (suc rank))
-  ε {2+ rank} (F.suc n) = Mod.0ᴹ ℝ-mod , ε n
+--   -- convenience function
+--   _>-<_
+--     : ∀ {k}
+--     → (f : ℝ → ℝ) (f' : ∀ {l} → D ℝ-mod ℝ-mod l → D ℝ-mod ℝ-mod l)
+--     → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
+--   (f >-< _) (z x) = z (f x)
+--   (f >-< f') dfx@(d x dx) = d (f x) λ v → dx v * f' (hack dfx)
 
 
-  ∇_ grad : ∀ {rank} → D (ℝ^ rank) (ℝ^ 1) 1 → ℝ ^ rank
-  ∇_ {rank = rank} f = map (jacobian f) rank unitvecs
-    where
-      unitvecs : (ℝ ^ rank) ^ rank
-      unitvecs = map ε rank (tabulate rank id)
-
-  grad = ∇_
+--   ε : ∀ {rank} → Fin rank → ℝ ^ rank
+--   ε {zero} n = _
+--   ε {suc zero} _ = 1.0
+--   ε {2+ rank} F.zero = 1.0 , Mod.0ᴹ (ℝ^ (suc rank))
+--   ε {2+ rank} (F.suc n) = Mod.0ᴹ ℝ-mod , ε n
 
 
-  infixl 8 _**_
-  infixr 9 -_
-  infixr 9 e^_
+--   ∇_ grad : ∀ {rank} → D (ℝ^ rank) (ℝ^ 1) 1 → ℝ ^ rank
+--   ∇_ {rank = rank} f = map (jacobian f) rank unitvecs
+--     where
+--       unitvecs : (ℝ ^ rank) ^ rank
+--       unitvecs = map ε rank (tabulate rank id)
 
-  -_
-    : ∀ {r ℓ} {CR : CommutativeRing r ℓ} {m ℓm} {{M : Module CR m ℓm}} (x : Mod.Carrierᴹ M)
-    → Mod.Carrierᴹ M
-  -_ x = -ᴹ x
-
-
-  ℝ-sgn : ℝ → ℝ
-  ℝ-sgn x = if does (0.0 ℝ.≤? x) then 1.0 else ℝ.- 1.0
-    where
-      open import Data.Bool using (if_then_else_)
-      open import Relation.Nullary using (does)
-
-  ℝ-abs : ℝ → ℝ
-  ℝ-abs x = x ℝ.* ℝ-sgn x
+--   grad = ∇_
 
 
-  -- the first is the zero-order 
-  poly : ∀ {rank k} → ℝ ^ suc rank → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
-  poly {rank = zero} cs x = konst cs
-  poly {rank = suc rank} (c , cs) x = konst c + x * poly cs x
+--   infixl 8 _**_
+--   infixr 9 -_
+--   infixr 9 e^_
 
-  pow : ℕ → ∀ {k} → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
-  pow 0 x = konst 1.0
-  pow 1 x = x
-  pow (suc n) dx = dx * pow n dx
-
-  log e^_ recip abs sgn : ∀ {k} → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
-  log = ℝ.log >-< recip ∘ abs
-
-  recip (z x) = z (1.0 ℝ.÷ x)
-  recip dfx@(d fx f'x) = d (1.0 ℝ.÷ fx) λ x → - (f'x x * tmp * tmp)
-    where
-      tmp = recip (hack dfx)
-
-  abs = ℝ-abs >-< sgn
-
-  sgn = ℝ-sgn >-< λ _ → 0ᴹ
-
-  e^ z x = z (ℝ.e^ x)
-  e^ dfx@(d fx f'x) = d (run tmp) λ v → f'x v * tmp
-    where
-      tmp = e^ hack dfx
-
-  infixl 7 _÷_
-  _÷_ _**_ : ∀ {k} (x y : D ℝ-mod ℝ-mod k) → D ℝ-mod ℝ-mod k
-  x ÷ y = x * recip x
-  x ** y = e^ y * log x
+--   -_
+--     : ∀ {r ℓ} {CR : CommutativeRing r ℓ} {m ℓm} {{M : Module CR m ℓm}} (x : Mod.Carrierᴹ M)
+--     → Mod.Carrierᴹ M
+--   -_ x = -ᴹ x
 
 
-  _! : ℕ → ℕ
-  0 ! = 1
-  1 ! = 1
-  sucn@(suc n) ! = sucn ℕ.* (n !)
+--   ℝ-sgn : ℝ → ℝ
+--   ℝ-sgn x = if does (0.0 ℝ.≤? x) then 1.0 else ℝ.- 1.0
+--     where
+--       open import Data.Bool using (if_then_else_)
+--       open import Relation.Nullary using (does)
+
+--   ℝ-abs : ℝ → ℝ
+--   ℝ-abs x = x ℝ.* ℝ-sgn x
 
 
-  sterling : ∀ {k} → ℕ → D ℝ-mod ℝ-mod k
-  sterling {k} m = m' * log m' - m'
-    where
-      m' : D ℝ-mod ℝ-mod k
-      m' = ℝ.fromℕ m #
+--   -- the first is the zero-order 
+--   poly : ∀ {rank k} → ℝ ^ suc rank → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
+--   poly {rank = zero} cs x = konst cs
+--   poly {rank = suc rank} (c , cs) x = konst c + x * poly cs x
+
+--   pow : ℕ → ∀ {k} → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
+--   pow 0 x = konst 1.0
+--   pow 1 x = x
+--   pow (suc n) dx = dx * pow n dx
+
+--   log e^_ recip abs sgn : ∀ {k} → D ℝ-mod ℝ-mod k → D ℝ-mod ℝ-mod k
+--   log = ℝ.log >-< recip ∘ abs
+
+--   recip (z x) = z (1.0 ℝ.÷ x)
+--   recip dfx@(d fx f'x) = d (1.0 ℝ.÷ fx) λ x → - (f'x x * tmp * tmp)
+--     where
+--       tmp = recip (hack dfx)
+
+--   abs = ℝ-abs >-< sgn
+
+--   sgn = ℝ-sgn >-< λ _ → 0ᴹ
+
+--   e^ z x = z (ℝ.e^ x)
+--   e^ dfx@(d fx f'x) = d (run tmp) λ v → f'x v * tmp
+--     where
+--       tmp = e^ hack dfx
+
+--   infixl 7 _÷_
+--   _÷_ _**_ : ∀ {k} (x y : D ℝ-mod ℝ-mod k) → D ℝ-mod ℝ-mod k
+--   x ÷ y = x * recip x
+--   x ** y = e^ y * log x
 
 
-  -- without the constant denominator term
-  logPoisson' : ∀ {n} → ℕ → D ℝ-mod ℝ-mod n → D ℝ-mod ℝ-mod n
-  logPoisson' k λ' = k' * log λ' - λ'
-    where k' = ℝ.fromℕ k #
-
-  logPoisson : ∀ {n} → ℕ → D ℝ-mod ℝ-mod n → D ℝ-mod ℝ-mod n
-  logPoisson k λ' = logPoisson' k λ' - sterling k
+--   _! : ℕ → ℕ
+--   0 ! = 1
+--   1 ! = 1
+--   sucn@(suc n) ! = sucn ℕ.* (n !)
 
 
-  -- descend : ∀ {rank} (f : D (ℝ^ rank) 1 → D ℝ-mod 1) (steps : ℕ) (start : ℝ ^ rank) → ℝ ^ rank
-  -- descend f zero start = start
-  -- descend f (suc steps) start = {!   !}
+--   sterling : ∀ {k} → ℕ → D ℝ-mod ℝ-mod k
+--   sterling {k} m = m' * log m' - m'
+--     where
+--       m' : D ℝ-mod ℝ-mod k
+--       m' = ℝ.fromℕ m #
 
 
-  module _ where
-    open import Relation.Binary.PropositionalEquality using (refl)
+--   -- without the constant denominator term
+--   logPoisson' : ∀ {n} → ℕ → D ℝ-mod ℝ-mod n → D ℝ-mod ℝ-mod n
+--   logPoisson' k λ' = k' * log λ' - λ'
+--     where k' = ℝ.fromℕ k #
 
-    _ : (∇ (var 1.0 * var 1.0)) ℝ.≈ 2.0
-    _ = refl
-
--- -- --   _ : run e^_ 2.0 ℝ.≈ (ℝ.e^ 2.0)
--- -- --   _ = refl
-
-
--- -- --   testpoly : ∀ {n} → D ℝ-mod n → D ℝ-mod n
--- -- --   testpoly = poly (1.0 , 2.0 , 3.0)
+--   logPoisson : ∀ {n} → ℕ → D ℝ-mod ℝ-mod n → D ℝ-mod ℝ-mod n
+--   logPoisson k λ' = logPoisson' k λ' - sterling k
 
 
--- -- --   _ : run testpoly 2.0 ℝ.≈ (1.0 + 4.0 + 12.0)
--- -- --   _ = refl
+--   -- descend : ∀ {rank} (f : D (ℝ^ rank) 1 → D ℝ-mod 1) (steps : ℕ) (start : ℝ ^ rank) → ℝ ^ rank
+--   -- descend f zero start = start
+--   -- descend f (suc steps) start = {!   !}
 
--- -- --   _ : ∇ testpoly [ 2.0 ] ℝ.≈ (0.0 + 2.0 + 3.0 ℝ.* 2.0 ℝ.* 2.0)
--- -- --   _ = refl
 
--- -- --   _ : ∇ testpoly [ 7.0 ] ℝ.≈ (0.0 + 2.0 + 2.0 ℝ.* 3.0 ℝ.* 7.0)
--- -- --   _ = refl
+--   module _ where
+--     open import Relation.Binary.PropositionalEquality using (refl)
 
--- -- --   _ : hessian e^_ 1.0 1.0 0.0 ℝ.≈ (ℝ.e^ 1.0)
--- -- --   _ = refl
+--     _ : (∇ (var 1.0 * var 1.0)) ℝ.≈ 2.0
+--     _ = refl
 
--- -- --   asdf : D ℝ-mod 2
--- -- --   asdf = e^ var (2.0 , 1.0 , 0.0)
+-- -- -- --   _ : run e^_ 2.0 ℝ.≈ (ℝ.e^ 2.0)
+-- -- -- --   _ = refl
 
--- -- --   _ : hessian (poly (1.0 , 2.0 , 3.0)) 1.0 1.0 0.0 ℝ.≈ (2.0 ℝ.* 3.0)
--- -- --   _ = refl
 
--- -- --   _ : ∇ log [ 1.0 ] ℝ.≈ 1.0
--- -- --   _ = refl
+-- -- -- --   testpoly : ∀ {n} → D ℝ-mod n → D ℝ-mod n
+-- -- -- --   testpoly = poly (1.0 , 2.0 , 3.0)
 
--- -- --   _ : ∇ log [ -ᴹ 1.0 ] ℝ.≈ 1.0
--- -- --   _ = refl
 
--- -- --   _ : ∇ sgn [ 2.0 ] ℝ.≈ 0.0
--- -- --   _ = refl
+-- -- -- --   _ : run testpoly 2.0 ℝ.≈ (1.0 + 4.0 + 12.0)
+-- -- -- --   _ = refl
 
--- -- --   _ : ∇ abs [ 2.0 ] ℝ.≈ 1.0
--- -- --   _ = refl
+-- -- -- --   _ : ∇ testpoly [ 2.0 ] ℝ.≈ (0.0 + 2.0 + 3.0 ℝ.* 2.0 ℝ.* 2.0)
+-- -- -- --   _ = refl
 
--- -- --   _ : run abs (- 2.0) ℝ.≈ 2.0
--- -- --   _ = refl
+-- -- -- --   _ : ∇ testpoly [ 7.0 ] ℝ.≈ (0.0 + 2.0 + 2.0 ℝ.* 3.0 ℝ.* 7.0)
+-- -- -- --   _ = refl
 
--- -- --   _ : ∇ abs [ - 1.0 ] ℝ.≈ (- 1.0)
--- -- --   _ = refl
+-- -- -- --   _ : hessian e^_ 1.0 1.0 0.0 ℝ.≈ (ℝ.e^ 1.0)
+-- -- -- --   _ = refl
 
--- -- --   _ : ∇ recip [ - 2.0 ] ℝ.≈ (- 0.25)
--- -- --   _ = refl
+-- -- -- --   asdf : D ℝ-mod 2
+-- -- -- --   asdf = e^ var (2.0 , 1.0 , 0.0)
 
--- -- --   _ : ∇ log [ 2.0 ] ℝ.≈ 0.5
--- -- --   _ = refl
+-- -- -- --   _ : hessian (poly (1.0 , 2.0 , 3.0)) 1.0 1.0 0.0 ℝ.≈ (2.0 ℝ.* 3.0)
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ log [ 1.0 ] ℝ.≈ 1.0
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ log [ -ᴹ 1.0 ] ℝ.≈ 1.0
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ sgn [ 2.0 ] ℝ.≈ 0.0
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ abs [ 2.0 ] ℝ.≈ 1.0
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : run abs (- 2.0) ℝ.≈ 2.0
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ abs [ - 1.0 ] ℝ.≈ (- 1.0)
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ recip [ - 2.0 ] ℝ.≈ (- 0.25)
+-- -- -- --   _ = refl
+
+-- -- -- --   _ : ∇ log [ 2.0 ] ℝ.≈ 0.5
+-- -- -- --   _ = refl
