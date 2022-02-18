@@ -1,4 +1,4 @@
-module Real where
+module Data.Real where
 
 open import Real.Base public
 
