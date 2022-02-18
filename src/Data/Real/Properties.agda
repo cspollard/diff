@@ -11,6 +11,7 @@ open import Algebra.Module.Construct.TensorUnit using (⟨module⟩)
 open import Algebra.Module.Normed using (IsNormedModule; NormedModule)
 open import Algebra.Apartness using (IsHeytingField; HeytingField)
 open import Level using (0ℓ)
+open import Data.Product using (_,_)
 
 
 +-*-isCommutativeRing : IsCommutativeRing _≈_ _+_ _*_ -_ 0.0 1.0
@@ -28,8 +29,26 @@ open import Level using (0ℓ)
 +-*-heytingField : HeytingField 0ℓ 0ℓ 0ℓ
 +-*-heytingField = record { isHeytingField = +-*-isHeytingField  }
 
++-*-isOrderedHeytingField : IsOrderedHeytingField +-*-heytingField _<_
++-*-isOrderedHeytingField =
+  record
+  { isStrictTotalOrder = <-isStrictTotalOrder
+  ; ordered = assume
+  }
+
 +-*-isArchimedanHeytingField : IsArchimedanHeytingField +-*-heytingField _<_
-+-*-isArchimedanHeytingField = assume
++-*-isArchimedanHeytingField =
+  record
+  { dense = λ a b a<b → ((a + b) ÷ 2.0) , assume
+  ; archimedan = λ a b a<0 b<0 → ∣ unsafeM ⌈ b ÷ a ⌉ ∣ , assume
+  }
+  where
+    open import Data.Integer using (∣_∣)
+    open import Data.Maybe
+
+    unsafeM : ∀ {a} {A : Set a} → Maybe A → A
+    unsafeM (just x) = x
+    unsafeM nothing = assume
 
 abs-isNormedModule : IsNormedModule +-*-module _≤_ abs
 abs-isNormedModule = assume
