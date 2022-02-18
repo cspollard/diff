@@ -1,5 +1,5 @@
 module Data.Real where
 
-open import Real.Base public
+open import Data.Real.Base public
 
-open import Real.Order public
+open import Data.Real.Order public
