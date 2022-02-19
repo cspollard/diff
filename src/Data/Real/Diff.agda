@@ -25,14 +25,15 @@ import Algebra.Module.Construct.TensorUnit as U
 import Data.Nat as ℕ
 open ℕ using (ℕ)
 open import Data.Unit.Polymorphic using (tt; ⊤)
-open import Data.Product using (_×_; _,_; proj₁)
+open import Data.Product using (_×_; _,_; proj₁; proj₂)
 open import Algebra.Module using (Module)
 open import Algebra.Module.Morphism.Module
 open import Algebra.Module.Vec.Recursive
 
-module M = Module
-module CR = CommutativeRing
 
+open import Relation.Binary.PropositionalEquality
+open import Data.Product.Properties using (×-≡,≡→≡)
+open ≡-Reasoning
 
 instance
   ℝ-cr : CommutativeRing 0ℓ 0ℓ
@@ -50,29 +51,37 @@ D : ℕ → Set
 D ℕ.zero = ℝ
 D (ℕ.suc n) = ℝ × D n
 
+mutual
+  const : ∀ {n} → ℝ → D n
+  const {ℕ.zero} x = x
+  const {ℕ.suc n} x = x , zero
 
-zero : ∀ {n} → D n
-zero {ℕ.zero} = 0.0
-zero {ℕ.suc n} = 0.0 , zero
+  zero : ∀ {n} → D n
+  zero = const 0.0
 
-const : ∀ {n} → ℝ → D n
-const {ℕ.zero} x = x
-const {ℕ.suc n} x = x , zero
+diff : ∀ {n} → D (ℕ.suc n) → D n
+diff = proj₂
 
 return : ∀ {n} → ℝ → D n
 return {ℕ.zero} x = x
 return {ℕ.suc n} x = x , const 1.0
 
-
 lop : ∀ {n} → D (ℕ.suc n) → D n
 lop {ℕ.zero} (f , f') = f
 lop {ℕ.suc n} (f , f') = f , lop f'
 
+lop-zero : ∀ {n} → lop zero ≡ zero {n}
+lop-zero {ℕ.zero} = refl
+lop-zero {ℕ.suc n} = ×-≡,≡→≡ (refl , lop-zero)
+
+lop-const : ∀ {n} x → lop (const x) ≡ const {n} x
+lop-const {ℕ.zero} x = refl
+lop-const {ℕ.suc n} x = ×-≡,≡→≡ (refl , lop-zero)
+
 infixl 6 _+_
-infixl 7 _*_ _*>_
+infixl 7 _*_
 
 _*_ _+_ : ∀ {n} (x y : D n) → D n
-_*>_ : ∀ {n} (s : ℝ) (x : D n) → D n
 
 _*_ {ℕ.zero} x y = x ℝ.* y
 _*_ {ℕ.suc n} ff@(f , f') gg@(g , g') = f * g , lop ff * g' + lop gg * f'
@@ -80,17 +89,77 @@ _*_ {ℕ.suc n} ff@(f , f') gg@(g , g') = f * g , lop ff * g' + lop gg * f'
 _+_ {ℕ.zero} x y = x ℝ.+ y
 _+_ {ℕ.suc n} (f , f') (g , g') = f + g , f' + g'
 
-_*>_ {ℕ.zero} s x = s * x
-_*>_ {ℕ.suc n} s (f , f') = s * f , s *> f'
 
-
+build : ∀ {n} → (ℝ → ℝ) → (∀ {m} → ℝ → D m) → ℝ → D n
+build {ℕ.zero} f g x = f x
+build {ℕ.suc n} f g x = f x , g x
 
 e^_ : ∀ {n} → ℝ → D n
 e^_ {ℕ.zero} x = ℝ.e^ x
 e^_ {ℕ.suc n} x = e^ x , e^ x
 
-_**2 : ∀ {n} → ℝ → D n
-x **2 = return x * return x
+infix 8 _^^_
+_^^_ : ∀ {n} → ℝ → ℕ → D n
+_^^_ x (ℕ.suc m) = return x * x ^^ m
+_^^_ x ℕ.zero = const 1.0
+
+infix 2 _!_
+_!_ : (∀ {n} → D n) → ∀ m → D m 
+d ! m = d {m}
+
+-- TODO should move to _≈_ at some point
+
++-identity : ∀ {n} (x : D n) → x + zero ≡ x
++-identity {ℕ.zero} x = assume
++-identity {ℕ.suc n} (x , x') = ×-≡,≡→≡ (+-identity x , +-identity x')
+
+*-commutative : ∀ {n} {x y : D n} → x * y ≡ y * x
+*-commutative = assume
+
+*-zero : ∀ {n} (x : D n) → x * zero ≡ zero
+*-zero {ℕ.zero} x = assume
+*-zero {ℕ.suc n} xx@(x , x') = ×-≡,≡→≡ (*-zero x , proof)
+  where
+    open ≡-Reasoning
+
+    proof : lop xx * diff zero + lop zero * x' ≡ zero
+    proof =
+      begin
+        lop xx * diff zero + lop zero * x'
+      ≡⟨ cong₂ _+_ (*-zero (lop xx)) (cong₂ _*_ lop-zero refl) ⟩
+        zero + zero * x'
+      ≡⟨ cong₂ _+_ refl *-commutative ⟩
+        zero + x' * zero
+      ≡⟨ cong₂ _+_ refl (*-zero x') ⟩
+        zero + zero
+      ≡⟨ +-identity zero ⟩
+        zero
+      ∎
+
+
+*-identity : ∀ {n} (x : D n) → (const 1.0 * x) ≡ x
+*-identity {ℕ.zero} x = assume
+*-identity {ℕ.suc n} xx@(x , x') = ×-≡,≡→≡ (*-identity x , proof)
+  where
+    open ≡-Reasoning
+
+    lopconst≡const : ∀ {m} x → lop {m} (const x) ≡ const x
+    lopconst≡const {ℕ.zero} _ = refl
+    lopconst≡const {ℕ.suc m} x = ×-≡,≡→≡ (refl , lopconst≡const 0.0)
+
+    proof : lop (1.0 , zero) * x' + lop xx * zero ≡ x'
+    proof =
+      begin
+        lop (1.0 , zero) * x' + lop xx * zero
+      ≡⟨ cong₂ _+_ refl (*-zero (lop xx)) ⟩
+        lop (1.0 , zero) * x' + zero
+      ≡⟨ +-identity (lop (1.0 , zero) * x') ⟩
+        lop (1.0 , zero) * x'
+      ≡⟨ cong₂ _*_ (lop-const 1.0) refl ⟩
+        const 1.0 * x'
+      ≡⟨ *-identity x' ⟩
+        x'
+      ∎
 
 _>>=_ : ∀ {n} → D n → (ℝ → D n) → D n
 _>>=_ {ℕ.zero} x f = f x
@@ -98,19 +167,17 @@ _>>=_ {ℕ.suc n} (g , g') f =
   let (fg , f'g) = f g
   in fg , f'g * g'
 
+liftD : ∀ {n} → (ℝ → D n) → D n → D n
+liftD f d = d >>= f
 
--- chain rule
--- d (f ∘ g) = λ x → f'|gx * g'x * dx
--- example
--- f = exp
--- g = **2
--- d/dx (f (g x)) = exp (x **2) * 2x
 
-asdf : ℝ → D 3
-asdf x = do
-  y ← x **2
-  z ← e^ y
+asdf : ∀ n → ℝ → D n
+asdf n x = do
+  y ← x ^^ 2
+  z ← y ^^ 2
+  -- z ← e^ y
   return z
+
 
 
 -- DRR : Set _
