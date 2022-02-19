@@ -1,0 +1,3 @@
+name: diff
+depend: standard-library reals
+include: src
