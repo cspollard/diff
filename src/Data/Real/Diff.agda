@@ -31,6 +31,7 @@ open import Algebra.Module.Morphism.Module
 open import Algebra.Module.Vec.Recursive
 
 
+-- TODO should move to _≈_ at some point
 open import Relation.Binary.PropositionalEquality
 open import Data.Product.Properties using (×-≡,≡→≡)
 open ≡-Reasoning
@@ -107,8 +108,6 @@ infix 2 _!_
 _!_ : (∀ {n} → D n) → ∀ m → D m 
 d ! m = d {m}
 
--- TODO should move to _≈_ at some point
-
 +-identity : ∀ {n} (x : D n) → x + zero ≡ x
 +-identity {ℕ.zero} x = assume
 +-identity {ℕ.suc n} (x , x') = ×-≡,≡→≡ (+-identity x , +-identity x')
@@ -165,10 +164,24 @@ _>>=_ : ∀ {n} → D n → (ℝ → D n) → D n
 _>>=_ {ℕ.zero} x f = f x
 _>>=_ {ℕ.suc n} (g , g') f =
   let (fg , f'g) = f g
+  -- TODO
+  -- a factor of g' is being lost in the 2nd derivative...
   in fg , f'g * g'
+
+
+>>=return=id : ∀ {n} (x : D n) → x >>= return ≡ x
+>>=return=id {ℕ.zero} x = refl
+>>=return=id {ℕ.suc n} (x , x') = ×-≡,≡→≡ (refl , *-identity x')
+
+diffexp≡exp : ∀ {n} x → diff {n} (e^ x) ≡ e^ x
+diffexp≡exp x = refl
 
 liftD : ∀ {n} → (ℝ → D n) → D n → D n
 liftD f d = d >>= f
+
+_**_ : ∀ {n} → D n → ℕ → D n
+x ** m = x >>= (_^^ m)
+
 
 
 asdf : ∀ n → ℝ → D n
@@ -177,6 +190,9 @@ asdf n x = do
   z ← y ^^ 2
   -- z ← e^ y
   return z
+
+test : ∀ x → diff (diff (asdf 2 x)) ≡ 12.0 * x
+test x = {!   !}
 
 
 
