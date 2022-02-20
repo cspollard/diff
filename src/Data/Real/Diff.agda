@@ -32,25 +32,34 @@ const : ∀ {n} → ℝ → Tower n
 const {zero} x = []
 const {suc n} x = x ∷ const 0.0
 
-return : ∀ {n} → ℝ → Tower n
-return {zero} x = []
-return {suc n} x = x ∷ const 1.0
+return : ℝ → Tower 2
+return x = x ∷ const 1.0
 
 extract : Tower 1 → ℝ
 extract = head
+
+lop : ∀ {n} → Tower (suc n) → Tower n
+lop {zero} _ = []
+lop {suc n} (x ∷ xs) = x ∷ lop xs
+
+apply : ∀ {n} (f : Tower 2 → Tower n) (x : ℝ) → Tower n
+apply f = f ∘ return
 
 run : (f : Tower 1 → Tower 1) (x : ℝ) → ℝ
 run f = extract ∘ f ∘ const
 
 diff : ∀ {n} → (f : Tower 2 → Tower (suc n)) → ℝ → Tower n
-diff f = tail ∘ f ∘ return
+diff f = tail ∘ apply f
+
+d^ : ∀ n (x : Tower (suc n)) → ℝ
+d^ zero x = extract x
+d^ (suc n) x = d^ n (tail x)
 
 grad : (f : Tower 2 → Tower 2) → ℝ → ℝ
-grad f = extract ∘ diff f
+grad f = d^ 1 ∘ apply f
 
-lop : ∀ {n} → Tower (suc n) → Tower n
-lop {zero} _ = []
-lop {suc n} (x ∷ xs) = x ∷ lop xs
+hessian : (f : Tower 2 → Tower 3) → ℝ → ℝ
+hessian f = d^ 2 ∘ apply f
 
 
 infixl 6 _+_
@@ -130,3 +139,28 @@ x ! m = x {m}
 descend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
 descend f δ zero x = x
 descend f δ (suc n) x = descend f δ n (x ℝ.- δ ℝ.* grad f x)
+
+ascend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
+ascend f δ zero x = x
+ascend f δ (suc n) x = ascend f δ n (x ℝ.+ δ ℝ.* grad f x)
+
+
+sterling : ℕ → ℝ
+sterling n = n' ℝ.* ℝ.log n' ℝ.- n'
+  where
+    n' = ℝ.fromℕ n
+
+-- neglecting the normalization term
+logPoisson' : ∀ {n} → ℕ → Tower n → Tower n
+logPoisson' k α = const k' * log α - α
+  where
+    k' = ℝ.fromℕ k
+
+logPoisson : ∀ {n} → ℕ → Tower n → Tower n
+logPoisson k α = logPoisson' k α - const (sterling k)
+
+test : ℝ → ℝ
+test = ascend (logPoisson' 10) 0.5 1000
+
+testgrad : ℝ → ℝ
+testgrad = grad (logPoisson' 10)
