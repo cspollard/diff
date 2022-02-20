@@ -17,154 +17,197 @@ open import Relation.Binary.PropositionalEquality hiding ([_])
 open ≡-Reasoning
 
 
-open import Data.Vec hiding ([_])
+import Data.Vec as V
+open V using (Vec; []; _∷_) 
 
-module _ where
-  open import Data.Vec.Recursive as VR
+import Data.Vec.Recursive as VR
+open VR using (_^_; 2+_)
 
-  [_] : ∀ {a} {A : Set a} {n} → A VR.^ n → Vec A n
-  [_] {n = n} = VR.toVec n
 
 Tower : ℕ → Set
 Tower = Vec ℝ
 
 Diff : Set
-Diff = ∀ {n} → Tower n → Tower n
+Diff = ∀ {d n} → Tower d ^ n → Tower d ^ n
 
 Diff2 : Set
-Diff2 = ∀ {n} → Tower n → Tower n → Tower n
+Diff2 = ∀ {d n} → Tower d ^ n → Tower d ^ n → Tower d ^ n
 
 -- utility function
 infix 2 _!_
-_!_ : (∀ {n} → Tower n) → ∀ m → Tower m 
-x ! m = x {m}
+_!_ : (∀ {d'} → Tower d') → ∀ d → Tower d
+x ! d = x {d}
 
-const : ∀ {n} → ℝ → Tower n
-const {zero} x = []
-const {suc n} x = x ∷ const 0.0
+lift : ∀ {n a} {A : Set a} → A → A ^ n
+lift {n} x = VR.replicate n x
 
-return : ℝ → Tower 2
-return x = x ∷ const 1.0
+const' : ∀ {d} → ℝ → Tower d
+const' {zero} x = []
+const' {suc d} x = x ∷ (const' 0.0)
 
-extract : Tower 1 → ℝ
-extract = head
+const : ∀ {n d} → ℝ ^ n → Tower d ^ n
+const {n} = VR.map const' n
 
-lop : ∀ {n} → Tower (suc n) → Tower n
+return' : ℝ → Tower 2
+return' x = x ∷ const' 1.0
+
+return : ∀ {n} → ℝ ^ n → Tower 2 ^ n
+return {n} = VR.map return' n
+
+extract : ∀ {n} → Tower 1 ^ n → ℝ ^ n
+extract {n} = VR.map V.head n
+
+lop : ∀ {d} → Tower (suc d) → Tower d
 lop {zero} _ = []
-lop {suc n} (x ∷ xs) = x ∷ lop xs
+lop {suc d} (x ∷ xs) = x ∷ lop xs
 
-apply : ∀ {n} (f : Tower 2 → Tower n) (x : ℝ) → Tower n
+apply : ∀ {d m n} (f : Tower 2 ^ m → Tower d ^ n) (x : ℝ ^ m) → Tower d ^ n
 apply f = f ∘ return
 
-run : (f : Tower 1 → Tower 1) (x : ℝ) → ℝ
+run : ∀ {m n} (f : Tower 1 ^ m → Tower 1 ^ n) (x : ℝ ^ m) → ℝ ^ n
 run f = extract ∘ f ∘ const
 
-diff : ∀ {n} → (f : Tower 2 → Tower (suc n)) → ℝ → Tower n
-diff f = tail ∘ apply f
+-- direcational derivative
+du
+  : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n)
+  → Tower 2 ^ m → ℝ ^ n
+du {n = n} f xs = extract (VR.map V.tail n (f xs))
 
-d^ : ∀ n (x : Tower (suc n)) → ℝ
-d^ zero x = extract x
-d^ (suc n) x = d^ n (tail x)
+grad : ∀ {n} (f : Tower 2 ^ n → Tower 2) → ℝ ^ n → ℝ ^ n
+grad {n} f x = VR.map (du f) n directions
+  where
+    open import Data.Fin using (Fin; zero; suc)
+    open import Function using (id)
 
-grad : (f : Tower 2 → Tower 2) → ℝ → ℝ
-grad f = d^ 1 ∘ apply f
+    go : ∀ {m} → Fin m → ℝ ^ m → Tower 2 ^ m
+    go {m} zero ys = return ys
+    go {2+ m} (suc i) (y , ys) = const y , go i ys
 
-hessian : (f : Tower 2 → Tower 3) → ℝ → ℝ
-hessian f = d^ 2 ∘ apply f
+    directions : (Tower 2 ^ n) ^ n
+    directions = VR.map (λ i → go i x) n (VR.tabulate n id)
 
+-- hessian : (f : Tower 2 → Tower 3) → ℝ → ℝ
+-- hessian f = d^ 2 ∘ apply f
 
-infixl 6 _+_
-infixr 9 -_
-_+_ : Diff2
 -_ : Diff
-[] + [] = []
-(x ∷ xs) + (y ∷ ys) = x ℝ.+ y ∷ xs + ys
-- [] = []
-- (x ∷ xs) = ℝ.- x ∷ - xs
+-_ {n = n} = VR.map (V.map λ x → ℝ.- x) n
 
-infixl 6 _-_
-_-_ : Diff2
+infixl 6 _+_ _-_
+infixr 9 -_
+_+_ _-_ : Diff2
+_+_ {n = n} = VR.zipWith (V.zipWith ℝ._+_) n
 x - y = x + (- y)
+
+*T : ∀ {d} (x y : Tower d) → Tower d
+*T [] _ = []
+*T xx@(x ∷ xs) yy@(y ∷ ys) = x ℝ.* y ∷ *T (lop xx) ys + *T (lop yy) xs
 
 infixl 7 _*_
 _*_ : Diff2
-[] * [] = []
-xx@(x ∷ xs) * yy@(y ∷ ys) = x ℝ.* y ∷ lop xx * ys + lop yy * xs
+_*_ {zero} {n} x _ = x
+_*_ {suc d} {n} = VR.zipWith *T n
 
-_>-<_ : (ℝ → ℝ) → (∀ {m} → Tower m → Tower m) → Diff
+_>-<_ : (ℝ → ℝ) → (∀ {d'} → Tower d' → Tower d') → ∀ {d} → Tower d → Tower d
 (f >-< g) {zero} [] = []
-(f >-< g) {suc n} xx@(x ∷ xs) = f x ∷ xs * g (lop xx)
+(f >-< g) {suc d} xx@(x ∷ xs) = f x ∷ xs * g (lop xx)
+
+liftF : ∀ {d} (f : Tower d → Tower d) → ∀ {n} → Tower d ^ n → Tower d ^ n
+liftF f {n} = VR.map f n
 
 infixl 8 _^^_
-_^^_ : ∀ {n} → Tower n → (m : ℕ) → Tower n
-x ^^ zero = const 1.0
-x ^^ (suc n) = x * x ^^ n
+_^^_ : ∀ {d n} → Tower d ^ n → (m : ℕ) → Tower d ^ n
+x ^^ zero = lift (const 1.0)
+x ^^ (suc d) = x * x ^^ d
+
+
+module Single where
+  infixr 9 e^_
+  e^_ log recip sin cos sinh cosh abs sgn : ∀ {d} → Tower d → Tower d
+
+  e^ [] = []
+  e^_ {suc d} xx@(x ∷ xs) = ℝ.e^ x ∷ xs * (e^ lop xx)
+
+  log = ℝ.log >-< recip
+
+  recip [] = []
+  recip xx@(x ∷ xs) = 1/x ∷ 1/xx
+    where
+      1/x = 1.0 ℝ.÷ x
+      1/xx = recip (lop xx)
+
+  abs = ℝ.abs >-< sgn
+
+  sgn [] = []
+  sgn (x ∷ xs) = if does (0.0 ≤? x) then const 1.0 else const (ℝ.- 1.0)
+    where
+      open import Data.Bool using (if_then_else_)
+      open import Data.Real.Order
+      open import Relation.Nullary
+
+  -- I'm not sure why I have to write these by hand.
+  sin [] = []
+  sin xx@(x ∷ xs) = ℝ.sin x ∷ xs * cos (lop xx)
+
+  cos [] = []
+  cos xx@(x ∷ xs) = ℝ.cos x ∷ - xs * sin (lop xx)
+
+  sinh [] = []
+  sinh xx@(x ∷ xs) = ℝ.sinh x ∷ xs * cosh (lop xx)
+
+  cosh [] = []
+  cosh xx@(x ∷ xs) = ℝ.cosh x ∷ xs * sinh (lop xx)
 
 
 infixr 9 e^_
 e^_ log recip sin cos sinh cosh abs sgn : Diff
-
-e^ [] = []
-e^_ {suc n} xx@(x ∷ xs) = ℝ.e^ x ∷ xs * (e^ lop xx)
-
-log = ℝ.log >-< recip
-
-recip [] = []
-recip xx@(x ∷ xs) = 1/x ∷ 1/xx
-  where
-    1/x = 1.0 ℝ.÷ x
-    1/xx = recip (lop xx)
-
-abs = ℝ.abs >-< sgn
-
-sgn [] = []
-sgn (x ∷ xs) = if does (0.0 ≤? x) then const 1.0 else const (ℝ.- 1.0)
-  where
-    open import Data.Bool using (if_then_else_)
-    open import Data.Real.Order
-    open import Relation.Nullary
-
--- I'm not sure why I have to write these by hand.
-sin [] = []
-sin xx@(x ∷ xs) = ℝ.sin x ∷ xs * cos (lop xx)
-
-cos [] = []
-cos xx@(x ∷ xs) = ℝ.cos x ∷ - xs * sin (lop xx)
-
-sinh [] = []
-sinh xx@(x ∷ xs) = ℝ.sinh x ∷ xs * cosh (lop xx)
-
-cosh [] = []
-cosh xx@(x ∷ xs) = ℝ.cosh x ∷ xs * sinh (lop xx)
+e^_ = liftF Single.e^_
+log = liftF Single.log
+recip = liftF Single.recip
+abs = liftF Single.abs
+sgn = liftF Single.sgn
+sin = liftF Single.sin
+cos = liftF Single.cos
+sinh = liftF Single.sinh
+cosh = liftF Single.cosh
 
 infix 8 _**_
 _**_ : Diff2
 x ** y = e^ (y * log x)
 
-descend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
-descend f δ zero x = x
-descend f δ (suc n) x = descend f δ n (x ℝ.- δ ℝ.* grad f x)
+ascend descend
+  : ∀ {n} (f : Tower 2 ^ n → Tower 2) (δ : ℝ ^ n) (m : ℕ) (x : ℝ ^ n) → ℝ ^ n
+ascend f δ zero x = x 
+ascend {n = n} f δ (suc m) x = ascend f δ m (add x (mul δ (grad f x)))
+  where
+    add mul : (x y : ℝ ^ n) → ℝ ^ n
+    add = VR.zipWith ℝ._+_ n
+    mul = VR.zipWith ℝ._*_ n
 
-ascend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
-ascend f δ zero x = x
-ascend f δ (suc n) x = ascend f δ n (x ℝ.+ δ ℝ.* grad f x)
+descend f = ascend λ x → - f x
 
 sterling : ℕ → ℝ
 sterling n = n' ℝ.* ℝ.log n' ℝ.- n'
   where
     n' = ℝ.fromℕ n
 
-logPoisson' logPoisson : ℕ → Diff
+logPoisson' logPoisson : ∀ {n} → ℕ ^ n → ∀ {d} → Tower d ^ n → Tower d ^ n
 
 -- neglecting the normalization term
-logPoisson' k α = const k' * log α - α
+logPoisson' {n} k α = const k' * log α - α
   where
-    k' = ℝ.fromℕ k
+    k' = VR.map ℝ.fromℕ n k
 
-logPoisson k α = logPoisson' k α - const (sterling k)
+logPoisson {n} k α = logPoisson' k α - const (VR.map sterling n k)
 
-test : ℝ → ℝ
-test = ascend (logPoisson' 10) 0.5 1000
+sum : ∀ {d n} → Tower d ^ n → Tower d
+sum {d} {n} = VR.foldl (λ _ → Tower d) (const 0.0) id (λ _ x y → x + y) n
+  where open import Function using (id)
 
-testgrad : ℝ → ℝ
-testgrad = grad (logPoisson' 10)
+testf : ∀ {d n} → Tower d ^ n → Tower d
+testf x = sum (logPoisson' (lift 10) x)
+
+test : ∀ {n} → ℝ ^ n → ℝ ^ n
+test = ascend testf (lift 1.0) 1000
+
+testgrad : ∀ {n} → ℝ ^ n → ℝ ^ n
+testgrad = grad testf
