@@ -28,6 +28,17 @@ module _ where
 Tower : ℕ → Set
 Tower = Vec ℝ
 
+Diff : Set
+Diff = ∀ {n} → Tower n → Tower n
+
+Diff2 : Set
+Diff2 = ∀ {n} → Tower n → Tower n → Tower n
+
+-- utility function
+infix 2 _!_
+_!_ : (∀ {n} → Tower n) → ∀ m → Tower m 
+x ! m = x {m}
+
 const : ∀ {n} → ℝ → Tower n
 const {zero} x = []
 const {suc n} x = x ∷ const 0.0
@@ -64,23 +75,23 @@ hessian f = d^ 2 ∘ apply f
 
 infixl 6 _+_
 infixr 9 -_
-_+_ : ∀ {n} → Tower n → Tower n → Tower n
--_ : ∀ {n} → Tower n → Tower n
+_+_ : Diff2
+-_ : Diff
 [] + [] = []
 (x ∷ xs) + (y ∷ ys) = x ℝ.+ y ∷ xs + ys
 - [] = []
 - (x ∷ xs) = ℝ.- x ∷ - xs
 
 infixl 6 _-_
-_-_ : ∀ {n} → Tower n → Tower n → Tower n
+_-_ : Diff2
 x - y = x + (- y)
 
 infixl 7 _*_
-_*_ : ∀ {n} → Tower n → Tower n → Tower n
+_*_ : Diff2
 [] * [] = []
 xx@(x ∷ xs) * yy@(y ∷ ys) = x ℝ.* y ∷ lop xx * ys + lop yy * xs
 
-_>-<_ : (ℝ → ℝ) → (∀ {m} → Tower m → Tower m) → ∀ {n} → Tower n → Tower n
+_>-<_ : (ℝ → ℝ) → (∀ {m} → Tower m → Tower m) → Diff
 (f >-< g) {zero} [] = []
 (f >-< g) {suc n} xx@(x ∷ xs) = f x ∷ xs * g (lop xx)
 
@@ -91,11 +102,11 @@ x ^^ (suc n) = x * x ^^ n
 
 
 infixr 9 e^_
-e^_ : ∀ {n} → Tower n → Tower n
+e^_ log recip sin cos sinh cosh abs sgn : Diff
+
 e^ [] = []
 e^_ {suc n} xx@(x ∷ xs) = ℝ.e^ x ∷ xs * (e^ lop xx)
 
-log recip sin cos sinh cosh abs sgn : ∀ {n} → Tower n → Tower n
 log = ℝ.log >-< recip
 
 recip [] = []
@@ -113,7 +124,6 @@ sgn (x ∷ xs) = if does (0.0 ≤? x) then const 1.0 else const (ℝ.- 1.0)
     open import Data.Real.Order
     open import Relation.Nullary
 
-
 -- I'm not sure why I have to write these by hand.
 sin [] = []
 sin xx@(x ∷ xs) = ℝ.sin x ∷ xs * cos (lop xx)
@@ -128,13 +138,8 @@ cosh [] = []
 cosh xx@(x ∷ xs) = ℝ.cosh x ∷ xs * sinh (lop xx)
 
 infix 8 _**_
-_**_ : ∀ {n} → (x y : Tower n) → Tower n
+_**_ : Diff2
 x ** y = e^ (y * log x)
-
-infix 2 _!_
-_!_ : (∀ {n} → Tower n) → ∀ m → Tower m 
-x ! m = x {m}
-
 
 descend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
 descend f δ zero x = x
@@ -144,19 +149,18 @@ ascend : (f : Tower 2 → Tower 2) (δ : ℝ) (n : ℕ) (x : ℝ) → ℝ
 ascend f δ zero x = x
 ascend f δ (suc n) x = ascend f δ n (x ℝ.+ δ ℝ.* grad f x)
 
-
 sterling : ℕ → ℝ
 sterling n = n' ℝ.* ℝ.log n' ℝ.- n'
   where
     n' = ℝ.fromℕ n
 
+logPoisson' logPoisson : ℕ → Diff
+
 -- neglecting the normalization term
-logPoisson' : ∀ {n} → ℕ → Tower n → Tower n
 logPoisson' k α = const k' * log α - α
   where
     k' = ℝ.fromℕ k
 
-logPoisson : ∀ {n} → ℕ → Tower n → Tower n
 logPoisson k α = logPoisson' k α - const (sterling k)
 
 test : ℝ → ℝ
