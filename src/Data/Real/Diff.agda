@@ -1,5 +1,6 @@
 module Data.Real.Diff where
 
+open import Level using (0ℓ)
 import Data.Real as ℝ
 open ℝ using (ℝ)
 open import Data.Real.Properties
@@ -36,7 +37,7 @@ Diff2 = ∀ {d n} → Tower d ^ n → Tower d ^ n → Tower d ^ n
 
 -- utility function
 infix 2 _!_
-_!_ : (∀ {d'} → Tower d') → ∀ d → Tower d
+_!_ : ∀ {n} → (∀ {d'} → Tower d' ^ n) → ∀ d → Tower d ^ n
 x ! d = x {d}
 
 lift : ∀ {n a} {A : Set a} → A → A ^ n
@@ -62,50 +63,8 @@ lop : ∀ {d} → Tower (suc d) → Tower d
 lop {zero} _ = []
 lop {suc d} (x ∷ xs) = x ∷ lop xs
 
-apply : ∀ {c d m n} (f : Tower (suc c) ^ m → Tower d ^ n) (x : ℝ ^ m) → Tower d ^ n
-apply f = f ∘ return
-
 run : ∀ {m n} (f : Tower 1 ^ m → Tower 1 ^ n) (x : ℝ ^ m) → ℝ ^ n
 run f = extract ∘ f ∘ const
-
--- directional derivative
-du
-  : ∀ {c d m n} (f : Tower c ^ m → Tower (suc d) ^ n)
-  → Tower c ^ m → Tower d ^ n
-du {n = n} f xs = VR.map V.tail n (f xs)
-
-fins : ∀ n → Fin n ^ n
-fins n = VR.tabulate n id
-
-directions : ∀ {d n} → ℝ ^ n → (Tower (suc d) ^ n) ^ n
-directions {d} {n} x = VR.map (λ i → go i x) n (fins n)
-  where
-    go : ∀ {m} → Fin m → ℝ ^ m → Tower (suc d) ^ m
-    go {1} zero y = return y
-    go {2+ m} zero (y , ys) = return y , const ys
-    go {2+ m} (suc i) (y , ys) = const y , go i ys
-
--- this is all very likely very slow
--- it's running du m times...
-jacobian grad : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n) → ℝ ^ m → (ℝ ^ n) ^ m
-jacobian {m = m} f x = VR.map (extract ∘ du f) m (directions x)
-grad = jacobian
-
-
-d2u
-  : ∀ {c d m n} (f : Tower c ^ m → Tower (suc (suc d)) ^ n)
-  → Tower c ^ m → Tower d ^ n
-d2u {n = n} f xs = VR.map (V.tail ∘ V.tail) n (f xs)
-
-outerWith
-  : ∀ {a b c} {A : Set a} {B : Set b} {C : Set c}
-  → (f : A → B → C) → ∀ {m} → A ^ m → ∀ {n} → B ^ n → (C ^ n) ^ m
-outerWith f {m} rm {n} rn = VR.map (λ x → VR.map (f x) n rn) m rm
-
--- hessian
---   : ∀ {c d m n} (f : Tower (suc c) ^ m  → Tower (2+ suc d) ^ n)
---   → ℝ ^ m → ((ℝ ^ n) ^ m) ^ m
--- hessian {m = m} f x = outerWith (λ y z → d2u ) (directions x) (directions x)
 
 -_ : Diff
 -_ {n = n} = VR.map (V.map λ x → ℝ.- x) n
@@ -124,6 +83,52 @@ infixl 7 _*_
 _*_ : Diff2
 _*_ {zero} {n} x _ = x
 _*_ {suc d} {n} = VR.zipWith *T n
+
+-- directional derivative
+du
+  : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n)
+  → Tower 2 ^ m → Tower 1 ^ n
+du {n = n} f xs = VR.map V.tail n (f xs)
+
+fins : ∀ n → Fin n ^ n
+fins n = VR.tabulate n id
+
+directions : ∀ {d n} → ℝ ^ n → (Tower (suc d) ^ n) ^ n
+directions {d} {n} x = VR.map (λ i → go i x) n (fins n)
+  where
+    go : ∀ {m} → Fin m → ℝ ^ m → Tower (suc d) ^ m
+    go {1} zero y = return y
+    go {2+ m} zero (y , ys) = return y , const ys
+    go {2+ m} (suc i) (y , ys) = const y , go i ys
+
+outerWith
+  : ∀ {a b c} {A : Set a} {B : Set b} {C : Set c}
+  → (f : A → B → C) → ∀ m n → A ^ m → B ^ n → (C ^ n) ^ m
+outerWith f m n rm rn = VR.map (λ x → VR.map (f x) n rn) m rm
+
+-- this is all very likely very slow
+-- it's running `du` `m` times...
+jacobian grad : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n) → ℝ ^ m → (ℝ ^ n) ^ m
+jacobian {m = m} f x = VR.map (extract ∘ du f) m (directions x)
+grad = jacobian
+
+-- TODO
+-- The second derivative cross terms are not currently clear to me.
+-- directions2d : ∀ {d n} → ℝ ^ n → ((Tower (suc d) ^ n) ^ n) ^ n
+-- directions2d {d} {n} x = outerWith _*_ n n (directions x) (directions x)
+
+-- d2u
+--   : ∀ {m n} (f : Tower 3 ^ m → Tower 3 ^ n)
+--   → Tower 3 ^ m → Tower 1 ^ n
+-- d2u {n = n} f xs = VR.map (V.tail ∘ V.tail) n (f xs)
+
+-- hessian
+--   : ∀ {m n} (f : Tower 3 ^ m  → Tower 3 ^ n)
+--   → ℝ ^ m → ((ℝ ^ n) ^ m) ^ m
+-- hessian {m} {n} f x
+--   = VR.map (λ dir → VR.map (extract ∘ d2u f) m dir) m (directions2d x)
+--   -- outerWith (λ y z → extract (du (du f) y)) m m (directions x) (directions x)
+
 
 _>-<_ : (ℝ → ℝ) → (∀ {d'} → Tower d' → Tower d') → ∀ {d} → Tower d → Tower d
 (f >-< g) {zero} [] = []
@@ -192,7 +197,7 @@ infix 8 _**_
 _**_ : Diff2
 x ** y = e^ (y * log x)
 
-ascend descend
+ascend descend 
   : ∀ {n} (f : Tower 2 ^ n → Tower 2) (δ : ℝ ^ n) (m : ℕ) (x : ℝ ^ n) → ℝ ^ n
 ascend f δ zero x = x 
 ascend {n = n} f δ (suc m) x = ascend f δ m (add x (mul δ (grad f x)))
@@ -202,6 +207,13 @@ ascend {n = n} f δ (suc m) x = ascend f δ m (add x (mul δ (grad f x)))
     mul = VR.zipWith ℝ._*_ n
 
 descend f = ascend λ x → - f x
+
+ascend_f=_δ=_steps=_start=_
+  : ∀ {n} (_ : ⊤ {0ℓ}) (f : Tower 2 ^ n → Tower 2) (δ : ℝ ^ n) (m : ℕ) (x : ℝ ^ n) → ℝ ^ n
+ascend_f=_δ=_steps=_start=_ _ = ascend
+
+∶ : ⊤ {0ℓ}
+∶ = _
 
 sterling : ℕ → ℝ
 sterling n = n' ℝ.* ℝ.log n' ℝ.- n'
@@ -217,6 +229,8 @@ logPoisson' {n} k α = const k' * log α - α
 
 logPoisson {n} k α = logPoisson' k α - const (VR.map sterling n k)
 
+
+
 sum : ∀ {d n} → Tower d ^ n → Tower d
 sum {d} {n} = VR.foldl (λ _ → Tower d) (const 0.0) id (λ _ x y → x + y) n
   where open import Function using (id)
@@ -225,10 +239,15 @@ binned : ∀ {d n} → ℕ ^ n → Tower d ^ n → Tower d
 binned n = sum ∘ logPoisson' n
 
 test : ∀ {n} → ℝ ^ n → ℝ ^ n
-test = ascend (binned (lift 10)) (lift 1.0) 1000
+test x =
+  ascend ∶
+    f= binned (lift 10)
+    δ= lift 1.0
+    steps= 1000
+    start= x
 
 testgrad : ∀ {n} → ℝ ^ n → ℝ ^ n
 testgrad = grad (binned (lift 10))
 
-test' : jacobian (λ where (x , y) → x * y) (1.0 , 1.0) ≡ (1.0 , 1.0)
+test' : jacobian (λ where (x , y) → x * y) (1.0 , 2.0) ≡ (2.0 , 1.0)
 test' = refl
