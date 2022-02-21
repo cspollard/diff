@@ -10,7 +10,7 @@ open ℕ using (ℕ; suc; zero; _⊓_; _⊔_)
 open import Data.Unit.Polymorphic using (tt; ⊤)
 open import Data.Product using (_×_; _,_; proj₁; proj₂)
 
-open import Function using (_∘_)
+open import Function using (_∘_; id)
 
 -- TODO should move to _≈_ at some point
 open import Relation.Binary.PropositionalEquality hiding ([_])
@@ -23,6 +23,7 @@ open V using (Vec; []; _∷_)
 import Data.Vec.Recursive as VR
 open VR using (_^_; 2+_)
 
+open import Data.Fin using (Fin; zero; suc)
 
 Tower : ℕ → Set
 Tower = Vec ℝ
@@ -48,46 +49,63 @@ const' {suc d} x = x ∷ (const' 0.0)
 const : ∀ {n d} → ℝ ^ n → Tower d ^ n
 const {n} = VR.map const' n
 
-return' : ℝ → Tower 2
+return' : ∀ {d} → ℝ → Tower (suc d)
 return' x = x ∷ const' 1.0
 
-return : ∀ {n} → ℝ ^ n → Tower 2 ^ n
+return : ∀ {n d} → ℝ ^ n → Tower (suc d) ^ n
 return {n} = VR.map return' n
 
-extract : ∀ {n} → Tower 1 ^ n → ℝ ^ n
-extract {n} = VR.map V.head n
+extract : ∀ {d n} → Tower (suc d) ^ n → ℝ ^ n
+extract {n = n} = VR.map V.head n
 
 lop : ∀ {d} → Tower (suc d) → Tower d
 lop {zero} _ = []
 lop {suc d} (x ∷ xs) = x ∷ lop xs
 
-apply : ∀ {d m n} (f : Tower 2 ^ m → Tower d ^ n) (x : ℝ ^ m) → Tower d ^ n
+apply : ∀ {c d m n} (f : Tower (suc c) ^ m → Tower d ^ n) (x : ℝ ^ m) → Tower d ^ n
 apply f = f ∘ return
 
 run : ∀ {m n} (f : Tower 1 ^ m → Tower 1 ^ n) (x : ℝ ^ m) → ℝ ^ n
 run f = extract ∘ f ∘ const
 
--- direcational derivative
+-- directional derivative
 du
-  : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n)
-  → Tower 2 ^ m → ℝ ^ n
-du {n = n} f xs = extract (VR.map V.tail n (f xs))
+  : ∀ {c d m n} (f : Tower c ^ m → Tower (suc d) ^ n)
+  → Tower c ^ m → Tower d ^ n
+du {n = n} f xs = VR.map V.tail n (f xs)
 
-grad : ∀ {n} (f : Tower 2 ^ n → Tower 2) → ℝ ^ n → ℝ ^ n
-grad {n} f x = VR.map (du f) n directions
+fins : ∀ n → Fin n ^ n
+fins n = VR.tabulate n id
+
+directions : ∀ {d n} → ℝ ^ n → (Tower (suc d) ^ n) ^ n
+directions {d} {n} x = VR.map (λ i → go i x) n (fins n)
   where
-    open import Data.Fin using (Fin; zero; suc)
-    open import Function using (id)
-
-    go : ∀ {m} → Fin m → ℝ ^ m → Tower 2 ^ m
-    go {m} zero ys = return ys
+    go : ∀ {m} → Fin m → ℝ ^ m → Tower (suc d) ^ m
+    go {1} zero y = return y
+    go {2+ m} zero (y , ys) = return y , const ys
     go {2+ m} (suc i) (y , ys) = const y , go i ys
 
-    directions : (Tower 2 ^ n) ^ n
-    directions = VR.map (λ i → go i x) n (VR.tabulate n id)
+-- this is all very likely very slow
+-- it's running du m times...
+jacobian grad : ∀ {m n} (f : Tower 2 ^ m → Tower 2 ^ n) → ℝ ^ m → (ℝ ^ n) ^ m
+jacobian {m = m} f x = VR.map (extract ∘ du f) m (directions x)
+grad = jacobian
 
--- hessian : (f : Tower 2 → Tower 3) → ℝ → ℝ
--- hessian f = d^ 2 ∘ apply f
+
+d2u
+  : ∀ {c d m n} (f : Tower c ^ m → Tower (suc (suc d)) ^ n)
+  → Tower c ^ m → Tower d ^ n
+d2u {n = n} f xs = VR.map (V.tail ∘ V.tail) n (f xs)
+
+outerWith
+  : ∀ {a b c} {A : Set a} {B : Set b} {C : Set c}
+  → (f : A → B → C) → ∀ {m} → A ^ m → ∀ {n} → B ^ n → (C ^ n) ^ m
+outerWith f {m} rm {n} rn = VR.map (λ x → VR.map (f x) n rn) m rm
+
+-- hessian
+--   : ∀ {c d m n} (f : Tower (suc c) ^ m  → Tower (2+ suc d) ^ n)
+--   → ℝ ^ m → ((ℝ ^ n) ^ m) ^ m
+-- hessian {m = m} f x = outerWith (λ y z → d2u ) (directions x) (directions x)
 
 -_ : Diff
 -_ {n = n} = VR.map (V.map λ x → ℝ.- x) n
@@ -203,11 +221,14 @@ sum : ∀ {d n} → Tower d ^ n → Tower d
 sum {d} {n} = VR.foldl (λ _ → Tower d) (const 0.0) id (λ _ x y → x + y) n
   where open import Function using (id)
 
-testf : ∀ {d n} → Tower d ^ n → Tower d
-testf x = sum (logPoisson' (lift 10) x)
+binned : ∀ {d n} → ℕ ^ n → Tower d ^ n → Tower d
+binned n = sum ∘ logPoisson' n
 
 test : ∀ {n} → ℝ ^ n → ℝ ^ n
-test = ascend testf (lift 1.0) 1000
+test = ascend (binned (lift 10)) (lift 1.0) 1000
 
 testgrad : ∀ {n} → ℝ ^ n → ℝ ^ n
-testgrad = grad testf
+testgrad = grad (binned (lift 10))
+
+test' : jacobian (λ where (x , y) → x * y) (1.0 , 1.0) ≡ (1.0 , 1.0)
+test' = refl
