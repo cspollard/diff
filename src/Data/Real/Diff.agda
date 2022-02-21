@@ -115,7 +115,14 @@ grad = jacobian
 -- TODO
 -- The second derivative cross terms are not currently clear to me.
 -- directions2d : ∀ {d n} → ℝ ^ n → ((Tower (suc d) ^ n) ^ n) ^ n
--- directions2d {d} {n} x = outerWith _*_ n n (directions x) (directions x)
+-- directions2d {d} {n} x = rotations n dirs
+--   -- VR.zipWith (λ y ys → {!   !}) n (dirs) (rotations dirs)
+--   where
+--     dirs : (Tower (suc d) ^ n) ^ n
+--     dirs = directions x
+
+--     rotations : ∀ m → (Tower (suc d) ^ m) ^ m → ((Tower (suc d) ^ m) ^ m) ^ m
+--     rotations = {!   !}
 
 -- d2u
 --   : ∀ {m n} (f : Tower 3 ^ m → Tower 3 ^ n)
@@ -125,9 +132,9 @@ grad = jacobian
 -- hessian
 --   : ∀ {m n} (f : Tower 3 ^ m  → Tower 3 ^ n)
 --   → ℝ ^ m → ((ℝ ^ n) ^ m) ^ m
--- hessian {m} {n} f x
---   = VR.map (λ dir → VR.map (extract ∘ d2u f) m dir) m (directions2d x)
---   -- outerWith (λ y z → extract (du (du f) y)) m m (directions x) (directions x)
+-- hessian {m} {n} f x =
+--   VR.map (λ dir → VR.map (extract ∘ d2u f) m dir) m (directions2d x)
+  -- outerWith (λ y z → extract (du (du f) y)) m m (directions x) (directions x)
 
 
 _>-<_ : (ℝ → ℝ) → (∀ {d'} → Tower d' → Tower d') → ∀ {d} → Tower d → Tower d
@@ -248,6 +255,3 @@ test x =
 
 testgrad : ∀ {n} → ℝ ^ n → ℝ ^ n
 testgrad = grad (binned (lift 10))
-
-test' : jacobian (λ where (x , y) → x * y) (1.0 , 2.0) ≡ (2.0 , 1.0)
-test' = refl
